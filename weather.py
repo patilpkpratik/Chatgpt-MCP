@@ -108,8 +108,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--transport",
         choices=["stdio", "streamable-http", "sse"],
-        default=os.getenv("MCP_TRANSPORT", "stdio"),
-        help="Transport to run (default: stdio)",
+        default=os.getenv("MCP_TRANSPORT", "streamable-http"),
+        help="Transport to run (default: streamable-http)",
     )
     parser.add_argument(
         "--host",
@@ -119,18 +119,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.getenv("MCP_PORT", "8000")),
-        help="Bind port for HTTP/SSE transports (default: 8000)",
+        default=int(os.getenv("MCP_PORT", "7000")),
+        help="Bind port for HTTP/SSE transports (default: 7000)",
     )
     parser.add_argument(
         "--streamable-http-path",
         default=os.getenv("MCP_STREAMABLE_HTTP_PATH", "/mcp"),
         help="Path for streamable HTTP endpoint (default: /mcp)",
-    )
-    parser.add_argument(
-        "--sse-path",
-        default=os.getenv("MCP_SSE_PATH", "/sse"),
-        help="Path for SSE endpoint (default: /sse)",
     )
     return parser.parse_args()
 
@@ -142,7 +137,6 @@ def main():
     mcp.settings.host = args.host
     mcp.settings.port = args.port
     mcp.settings.streamable_http_path = args.streamable_http_path
-    mcp.settings.sse_path = args.sse_path
 
     mcp.run(transport=args.transport)
 
