@@ -1,118 +1,92 @@
-# Weather MCP Server
 
-MCP server that exposes weather tools backed by the US National Weather Service API.
+# 🌤️ MCP Weather App
 
-## Tools
+This project is a simple **MCP (Model Context Protocol)** server tool that provides real-time weather information based on natural language queries like:
 
-- `get_alerts(state: str)`
-- `get_forecast(latitude: float, longitude: float)`
+> "What's the weather in Bangalore?"
 
-## Requirements
+It uses:
+- 🧠 `mcp` to expose the weather tool
+- 📍 `geopy` (Nominatim) to convert location names to coordinates
+- 🌐 Open-Meteo API to fetch live weather data
 
-- Python 3.10+
-- `uv` (recommended) or `pip`
+---
 
-Note: this project will not install on Python 3.9.
+## 🚀 How It Works
 
-## Install
+### Tool: `open_weather_app(query)`
+The main MCP tool that:
+1. Extracts the location from the user query
+2. Geocodes the location name to latitude/longitude
+3. Calls Open-Meteo API to get current weather
+4. Returns a weather summary
 
-### Option A: uv (recommended)
+### 📦 Key Components
 
-```bash
-uv sync
+- `extract_location(query: str)`  
+  Parses user queries like `"weather in New York"` or `"Mumbai weather"` and extracts just the location.
+
+- `get_lat_lon(location_name)`  
+  Uses `geopy.geocoders.Nominatim` to convert location names into GPS coordinates.
+
+- `get_weather(lat, lon)`  
+  Fetches weather data from the Open-Meteo API and formats it using a custom description dictionary.
+
+---
+
+## Example Usage
+
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("Weather App")
+
+@mcp.tool()
+def open_weather_app(query):
+    ...
 ```
 
-### Option B: pip
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+Query:
+```
+What's the weather in Bangalore?
 ```
 
-## Configuration
-
-Copy and customize the environment template:
-
-```bash
-cp .env.example .env
+Response:
+```
+Weather: {
+  "temperature": "29 °C",
+  "windspeed": "10 km/h",
+  "weathercode": "Clear sky"
+}
 ```
 
-Key variables:
+---
 
-- `MCP_TRANSPORT`: `stdio`, `streamable-http`, or `sse`
-- `MCP_HOST`: host bind for HTTP/SSE modes
-- `MCP_PORT`: port bind for HTTP/SSE modes
-- `MCP_STREAMABLE_HTTP_PATH`: streamable HTTP route (default `/mcp`)
-- `MCP_SSE_PATH`: SSE route (default `/sse`)
-- `WEATHER_USER_AGENT`: optional NWS user-agent override
+## 📥 Requirements
 
-## Run Modes
+- `mcp`
+- `geopy`
+- `requests`
 
-### 1) Local stdio mode (for local MCP clients)
-
+Install them using:
 ```bash
-uv run weather.py --transport stdio
+uv init .
+```
+```bash
+uv add "mcp[cli]" geopy requests
 ```
 
-### 2) Streamable HTTP mode (for ChatGPT Web connectivity)
+---
 
-```bash
-uv run weather.py --transport streamable-http
-```
+## 📌 Notes
 
-By default, the streamable HTTP endpoint is available at:
+- The geolocation is done using OpenStreetMap via `Nominatim`
+- The weather API used is [https://open-meteo.com](https://open-meteo.com)
 
-- `http://localhost:8000/mcp`
+- To add MCP server to claude desktop app:  
+  ```bash
+  uv run mcp install main.py 
+  ```
+- Restart the cluaude desktop app
+---
 
-You can also override host/port/path directly:
-
-```bash
-uv run weather.py --transport streamable-http --host 0.0.0.0 --port 8080 --streamable-http-path /mcp
-```
-
-## Connect to ChatGPT Web
-
-ChatGPT Web cannot directly spawn local stdio processes. You must provide a reachable MCP URL.
-
-1. Start the server in streamable HTTP mode.
-2. Expose localhost via a secure tunnel (for example, Cloudflare Tunnel or ngrok).
-3. Copy the HTTPS URL for your `/mcp` endpoint.
-4. In ChatGPT, open Settings -> Apps.
-5. Add a custom app using your MCP server URL.
-6. Confirm tools are discoverable and run test prompts.
-
-Example tunnel commands:
-
-```bash
-# ngrok
-ngrok http 8000
-
-# cloudflared
-cloudflared tunnel --url http://localhost:8000
-```
-
-If your tunnel URL is `https://demo.example.ngrok-free.app`, use:
-
-- `https://demo.example.ngrok-free.app/mcp`
-
-Example test prompts:
-
-- "Use weather tools to get active alerts for CA"
-- "Use weather tools to get the forecast for 40.7128, -74.0060"
-
-## Troubleshooting
-
-- If dependency install fails, ensure `uv` is up to date.
-- If `uv sync` fails with proxy authorization while downloading Python, configure your proxy credentials or use a preinstalled local Python 3.10+.
-- If `pip install -e .` fails with "requires a different Python", switch to Python 3.10+ first.
-- If tool calls fail, check that `api.weather.gov` is reachable.
-- If ChatGPT cannot connect, verify your public HTTPS tunnel URL resolves to `/mcp`.
-- If ChatGPT cannot connect, verify host/port/path values match your tunnel target.
-- If there are no alerts for a state, the tool may correctly return no active alerts.
-
-## Security Notes
-
-- This server is read-only with respect to weather data.
-- Do not expose development servers publicly without access controls.
-- Review app permissions in ChatGPT before enabling broad usage.

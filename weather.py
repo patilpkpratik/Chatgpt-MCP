@@ -1,151 +1,75 @@
-import argparse
-import os
-from typing import Any
-
-import httpx
 from mcp.server.fastmcp import FastMCP
+from geopy.geocoders import Nominatim
+import requests
+import re
 
-# Initialize FastMCP server.
-# stateless_http/json_response improve streamable-http behavior for remote clients.
-mcp = FastMCP("weather", stateless_http=True, json_response=True)
-
-# Constants
-NWS_API_BASE = "https://api.weather.gov"
-DEFAULT_USER_AGENT = "weather-app/1.0"
-
-
-def get_user_agent() -> str:
-    return os.getenv("WEATHER_USER_AGENT", DEFAULT_USER_AGENT)
-
-
-async def make_nws_request(url: str) -> dict[str, Any] | None:
-    """Make a request to the NWS API with proper error handling."""
-    headers = {"User-Agent": get_user_agent(), "Accept": "application/geo+json"}
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, headers=headers, timeout=30.0)
-            response.raise_for_status()
-            return response.json()
-        except Exception:
-            return None
-
-
-def format_alert(feature: dict) -> str:
-    """Format an alert feature into a readable string."""
-    props = feature["properties"]
-    return f"""
-Event: {props.get("event", "Unknown")}
-Area: {props.get("areaDesc", "Unknown")}
-Severity: {props.get("severity", "Unknown")}
-Description: {props.get("description", "No description available")}
-Instructions: {props.get("instruction", "No specific instructions provided")}
-"""
-
-
+mcp = FastMCP("Weather App")
 @mcp.tool()
-async def get_alerts(state: str) -> str:
-    """Get weather alerts for a US state.
-
-    Args:
-        state: Two-letter US state code (e.g. CA, NY)
+def open_weather_app(query):
     """
-    state_code = state.strip().upper()
-    if len(state_code) != 2:
-        return "State must be a two-letter US state code (example: CA, NY)."
-
-    url = f"{NWS_API_BASE}/alerts/active/area/{state_code}"
-    data = await make_nws_request(url)
-
-    if not data or "features" not in data:
-        return "Unable to fetch alerts or no alerts found."
-
-    if not data["features"]:
-        return "No active alerts for this state."
-
-    alerts = [format_alert(feature) for feature in data["features"]]
-    return "\n---\n".join(alerts)
-
-
-@mcp.tool()
-async def get_forecast(latitude: float, longitude: float) -> str:
-    """Get weather forecast for a location.
-
-    Args:
-        latitude: Latitude of the location
-        longitude: Longitude of the location
+    Get information about the current weather in a specified location.
     """
-    # First get the forecast grid endpoint
-    points_url = f"{NWS_API_BASE}/points/{latitude},{longitude}"
-    points_data = await make_nws_request(points_url)
+    query= extract_location(query)
+    lat, lon = get_lat_lon(query)
+    return (f"Weather: {get_weather(lat, lon)}")
 
-    if not points_data:
-        return "Unable to fetch forecast data for this location."
+weathercode_desc = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Rime fog", 51: "Light drizzle", 61: "Light rain",
+    71: "Light snow", 80: "Rain showers", 95: "Thunderstorm"
+}
 
-    # Get the forecast URL from the points response
-    forecast_url = points_data["properties"]["forecast"]
-    forecast_data = await make_nws_request(forecast_url)
+def get_weather(lat, lon):
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+    try:
+        r = requests.get(url, timeout=5)
+        data = r.json()["current_weather"]
+        units = r.json()["current_weather_units"]
+        temp_c = str(data["temperature"])+" "+units["temperature"]
+        windspeed = str(data["windspeed"])+" "+units["windspeed"]
+        weather_desc = weathercode_desc.get(data["weathercode"], f"Code {data['weathercode']}")
 
-    if not forecast_data:
-        return "Unable to fetch detailed forecast."
+        return {
+            "temperature": temp_c,
+            "windspeed": windspeed,
+            "weathercode": weather_desc
+        }
+    except Exception as e:
+        print(f"Error fetching weather data: {e}")
+        return {"temperature": "N/A", "windspeed": "N/A", "weathercode": "N/A"}
 
-    # Format the periods into a readable forecast
-    periods = forecast_data["properties"]["periods"]
-    forecasts = []
-    for period in periods[:5]:  # Only show next 5 periods
-        forecast = f"""
-{period["name"]}:
-Temperature: {period["temperature"]}°{period["temperatureUnit"]}
-Wind: {period["windSpeed"]} {period["windDirection"]}
-Forecast: {period["detailedForecast"]}
-"""
-        forecasts.append(forecast)
-
-    return "\n---\n".join(forecasts)
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Weather MCP server")
-    parser.add_argument(
-        "--transport",
-        choices=["stdio", "streamable-http", "sse"],
-        default=os.getenv("MCP_TRANSPORT", "stdio"),
-        help="Transport to run (default: stdio)",
-    )
-    parser.add_argument(
-        "--host",
-        default=os.getenv("MCP_HOST", "127.0.0.1"),
-        help="Bind host for HTTP/SSE transports (default: 127.0.0.1)",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=int(os.getenv("MCP_PORT", "8000")),
-        help="Bind port for HTTP/SSE transports (default: 8000)",
-    )
-    parser.add_argument(
-        "--streamable-http-path",
-        default=os.getenv("MCP_STREAMABLE_HTTP_PATH", "/mcp"),
-        help="Path for streamable HTTP endpoint (default: /mcp)",
-    )
-    parser.add_argument(
-        "--sse-path",
-        default=os.getenv("MCP_SSE_PATH", "/sse"),
-        help="Path for SSE endpoint (default: /sse)",
-    )
-    return parser.parse_args()
+def get_lat_lon(location_name):
+    geolocator = Nominatim(user_agent="geoapi")
+    location = geolocator.geocode(location_name)
+    if location:
+        return location.latitude, location.longitude
+    else:
+        return None, None
 
 
-def main():
-    args = parse_args()
+def extract_location(query: str) -> str:
+    # Normalize the query
+    query = query.lower().strip()
 
-    # Apply transport-related network settings from CLI/env before launching.
-    mcp.settings.host = args.host
-    mcp.settings.port = args.port
-    mcp.settings.streamable_http_path = args.streamable_http_path
-    mcp.settings.sse_path = args.sse_path
+    # Common patterns
+    patterns = [
+        r"weather\s+(in|at|for|about)?\s*(.+)",         # e.g. "weather in new york"
+        r"what(?:'s| is)? the weather (in|at|for|about)?\s*(.+)",  # "what is the weather in new york"
+        r"how is the weather (in|at|for|about)?\s*(.+)"
+    ]
 
-    mcp.run(transport=args.transport)
+    for pattern in patterns:
+        match = re.search(pattern, query)
+        if match:
+            location = match.group(2)
+            return location.strip(" ?.,").title()
+
+    match = re.match(r"(.*?)(?:\s+weather)?$", query)
+    if match:
+        location = match.group(1)
+        return location.strip().title()    
+    # fallback
+    return query.title()  # Try returning the whole thing capitalized
 
 
-if __name__ == "__main__":
-    main()
+
