@@ -1,10 +1,46 @@
+# load env variables from .env file
+import os
+# from dotenv import load_dotenv
 from typing import Any
 
+# offical MCP python SDK for building tools and agents
 import httpx
 from mcp.server.fastmcp import FastMCP
+# from mcp.server.auth.settings import AuthSettings
 
-# Initialize FastMCP server
-mcp = FastMCP("weather")
+# configure auth
+# from pydantic import AnyHttpUrl
+
+
+# # load .env variables
+# load_dotenv()
+
+# # Get Auth0 configuration from environment
+# auth0_domain = os.getenv("AUTH0_DOMAIN")
+# resource_server_url = os.getenv("RESOURCE_SERVER_URL")
+
+
+# if not auth0_domain:
+#     raise ValueError("AUTH0_DOMAIN environment variable is required")
+# if not resource_server_url:
+#     raise ValueError("RESOURCE_SERVER_URL environment variable is required")
+
+# # Initialize Auth0 token verifier
+# token_verifier = create_auth0_verifier()
+
+# Initialize FastMCP server wigh authentication
+mcp = FastMCP(
+            "weather",
+            # instructions=server_instructions,
+            # host="0.0.0.0",
+            # # OAuth Configuration
+            # token_verifier=token_verifier,
+            # auth=AuthSettings(
+            #     issuer_url=AnyHttpUrl(f"https://{auth0_domain}/"),
+            #     resource_server_url=AnyHttpUrl(resource_server_url),
+            #     required_scopes=["openid", "profile", "email", "address", "phone"],
+            # ),
+        )
 
 # Constants
 NWS_API_BASE = "https://api.weather.gov"
@@ -94,7 +130,8 @@ Forecast: {period["detailedForecast"]}
 
 def main():
     # Initialize and run the server
-    mcp.run(transport="stdio")
+    # mcp.run(transport="stdio")
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":
