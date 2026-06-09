@@ -1,17 +1,10 @@
 [project]
-name = "weather-mcp-server"
+name = "chatgpt-mcp"
 version = "0.1.0"
-description = "Weather MCP server for NWS alerts and forecasts"
+description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-  "httpx==0.28.1",
-  "mcp[cli]==1.27.2",
+    "httpx>=0.28.1",
+    "mcp[cli]>=1.27.2",
 ]
-
-[project.scripts]
-weather-mcp = "weather:main"
-
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
