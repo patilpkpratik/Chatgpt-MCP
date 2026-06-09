@@ -1,9 +1,10 @@
 from mcp.server.fastmcp import FastMCP
 from geopy.geocoders import Nominatim
 import requests
-import re
+import re, os
 
 mcp = FastMCP("Weather App")
+
 @mcp.tool()
 def open_weather_app(query):
     """
