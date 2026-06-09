@@ -1,26 +1,19 @@
-import argparse
-import os
 from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-# Initialize FastMCP server.
-# stateless_http/json_response improve streamable-http behavior for remote clients.
-mcp = FastMCP("weather", stateless_http=True, json_response=True)
+# Initialize FastMCP server
+mcp = FastMCP("weather")
 
 # Constants
 NWS_API_BASE = "https://api.weather.gov"
-DEFAULT_USER_AGENT = "weather-app/1.0"
-
-
-def get_user_agent() -> str:
-    return os.getenv("WEATHER_USER_AGENT", DEFAULT_USER_AGENT)
+USER_AGENT = "weather-app/1.0"
 
 
 async def make_nws_request(url: str) -> dict[str, Any] | None:
     """Make a request to the NWS API with proper error handling."""
-    headers = {"User-Agent": get_user_agent(), "Accept": "application/geo+json"}
+    headers = {"User-Agent": USER_AGENT, "Accept": "application/geo+json"}
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(url, headers=headers, timeout=30.0)
@@ -49,11 +42,7 @@ async def get_alerts(state: str) -> str:
     Args:
         state: Two-letter US state code (e.g. CA, NY)
     """
-    state_code = state.strip().upper()
-    if len(state_code) != 2:
-        return "State must be a two-letter US state code (example: CA, NY)."
-
-    url = f"{NWS_API_BASE}/alerts/active/area/{state_code}"
+    url = f"{NWS_API_BASE}/alerts/active/area/{state}"
     data = await make_nws_request(url)
 
     if not data or "features" not in data:
@@ -103,48 +92,9 @@ Forecast: {period["detailedForecast"]}
     return "\n---\n".join(forecasts)
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Weather MCP server")
-    parser.add_argument(
-        "--transport",
-        choices=["stdio", "streamable-http", "sse"],
-        default=os.getenv("MCP_TRANSPORT", "stdio"),
-        help="Transport to run (default: stdio)",
-    )
-    parser.add_argument(
-        "--host",
-        default=os.getenv("MCP_HOST", "127.0.0.1"),
-        help="Bind host for HTTP/SSE transports (default: 127.0.0.1)",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=int(os.getenv("MCP_PORT", "8000")),
-        help="Bind port for HTTP/SSE transports (default: 8000)",
-    )
-    parser.add_argument(
-        "--streamable-http-path",
-        default=os.getenv("MCP_STREAMABLE_HTTP_PATH", "/mcp"),
-        help="Path for streamable HTTP endpoint (default: /mcp)",
-    )
-    parser.add_argument(
-        "--sse-path",
-        default=os.getenv("MCP_SSE_PATH", "/sse"),
-        help="Path for SSE endpoint (default: /sse)",
-    )
-    return parser.parse_args()
-
-
 def main():
-    args = parse_args()
-
-    # Apply transport-related network settings from CLI/env before launching.
-    mcp.settings.host = args.host
-    mcp.settings.port = args.port
-    mcp.settings.streamable_http_path = args.streamable_http_path
-    mcp.settings.sse_path = args.sse_path
-
-    mcp.run(transport=args.transport)
+    # Initialize and run the server
+    mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
