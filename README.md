@@ -5,3 +5,4 @@
 2. uv run weather.py            # run the weather MCP app. gives the host http
 3. npx @modelcontextprotocol/inspector   # new terminal, run the inspector to see the MCP interactions
 4. open in your browser to see the inspector UI
+5. Add MCP server as tool to co-pilot -> shift+cmd+p -> add tool
