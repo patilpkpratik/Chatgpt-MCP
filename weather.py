@@ -31,7 +31,7 @@ token_verifier = create_auth0_verifier()
 # Initialize FastMCP server wigh authentication
 mcp = FastMCP(
             "weather",
-            instructions=server_instructions,
+            # instructions=server_instructions,
             host="0.0.0.0",
             port=8000,
             # OAuth Configuration
