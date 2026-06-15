@@ -2,12 +2,14 @@
 Auth0 OAuth token verification for YouTube MCP Server.
 """
 
-import os
+import os, logging
 import asyncio
 from typing import Optional
 from jwt import PyJWKClient, decode, InvalidTokenError
 from mcp.server.auth.provider import AccessToken, TokenVerifier
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Auth0TokenVerifier(TokenVerifier):
     """Verifies OAuth tokens issued by Auth0."""
@@ -45,6 +47,8 @@ class Auth0TokenVerifier(TokenVerifier):
                     "verify_iss": True,
                 }
             )
+            
+            logger.info(f"payload: {payload}")
 
             # Extract scopes from token (optional; no enforcement)
             scopes = []
