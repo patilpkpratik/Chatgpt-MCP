@@ -33,7 +33,7 @@ mcp = FastMCP(
             "weather",
             # instructions=server_instructions,
             host="0.0.0.0",
-            port=8000,
+            # port=8000,
             # OAuth Configuration
             token_verifier=token_verifier,
             auth=AuthSettings(
