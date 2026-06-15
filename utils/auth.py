@@ -54,23 +54,25 @@ class Auth0TokenVerifier(TokenVerifier):
             scopes = []
             if "scope" in payload:
                 scopes = payload["scope"].split()
+                logger.info(f"Scopes from 'scope' claim: {scopes}")
             elif "permissions" in payload:
                 scopes = payload["permissions"]
+                logger.info(f"Scopes from 'permissions' claim: {scopes}")
 
             # Return AccessToken model (issuer/audience already validated)
             return AccessToken(
                 token=token,
-                client_id=payload.get("azp") or payload.get("client_id", "unknown"),
+                client_id=payload.get("azp"),
                 scopes=scopes,
                 expires_at=payload.get("exp"),
                 resource=self.audience,
             )
 
         except InvalidTokenError as e:
-            print(f"JWT verification failed: {e}")
+            logger.error(f"JWT verification failed: {e}")
             return None
         except Exception as e:
-            print(f"Token verification error: {e}")
+            logger.error(f"Token verification error: {e}")
             return None
 
 
