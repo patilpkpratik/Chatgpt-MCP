@@ -19,6 +19,9 @@ load_dotenv()
 auth0_domain = os.getenv("AUTH0_DOMAIN")
 resource_server_url = os.getenv("RESOURCE_SERVER_URL")
 
+# Load server instructions
+with open("prompts/server_instructions.md", "r") as file:
+    server_instructions = file.read()
 
 if not auth0_domain:
     raise ValueError("AUTH0_DOMAIN environment variable is required")
@@ -31,7 +34,7 @@ token_verifier = create_auth0_verifier()
 # Initialize FastMCP server wigh authentication
 mcp = FastMCP(
             "weather",
-            # instructions=server_instructions,
+            instructions=server_instructions,
             host="0.0.0.0",
             # port=8000,
             # OAuth Configuration

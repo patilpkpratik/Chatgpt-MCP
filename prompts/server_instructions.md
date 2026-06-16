@@ -1,28 +1,35 @@
-# YouTube MCP Server
+# Weather MCP Server
 
-This server provides tools for working with YouTube video content and transcript data.
+This server provides tools for retrieving weather data from the US National Weather Service (NWS) API. It runs over streamable HTTP and requires Auth0 OAuth authentication.
+
+## Authentication
+
+The server uses Auth0 for token verification. Clients must provide a valid JWT with the `offline_access` scope. Tokens are verified against the configured Auth0 domain and audience using RS256 signing keys fetched from JWKS.
+
+**Required environment variables:**
+- `AUTH0_DOMAIN` - Auth0 tenant domain
+- `AUTH0_AUDIENCE` - Expected audience claim for token verification
+- `RESOURCE_SERVER_URL` - Resource server URL for OAuth settings
 
 ## Available Tools
 
-### fetch_video_transcript
-Retrieves the full transcript of a YouTube video with timestamps.
+### get_alerts
+Retrieves active weather alerts for a US state.
 
 **Parameters:**
-- `url` (string): YouTube video URL
+- `state` (string): Two-letter US state code (e.g. CA, NY)
 
-**Returns:** Formatted transcript with timestamps in `[MM:SS] Text` format
+**Returns:** Formatted list of active alerts including event type, affected area, severity, description, and instructions. Returns a message if no alerts are found.
 
-**Usage:** Call this tool whenever you need to extract transcript data from a YouTube video.
+**Usage:** Call this tool to check for active weather warnings, watches, or advisories in a given state.
 
-### fetch_instructions
-Retrieves specialized writing instruction templates for working with video transcripts.
+### get_forecast
+Retrieves the weather forecast for a specific geographic location.
 
 **Parameters:**
-- `prompt_name` (string): Must be one of:
-  - `write_blog_post` - Guidelines for converting video content into blog posts
-  - `write_social_post` - Platform-specific social media formatting rules
-  - `write_video_chapters` - Rules for extracting and formatting video chapters
+- `latitude` (float): Latitude of the location
+- `longitude` (float): Longitude of the location
 
-**Returns:** Detailed instructions and formatting requirements for the requested content type
+**Returns:** Forecast for the next few days depending on user input, with a maximum of 5 periods including temperature, wind speed/direction, and detailed forecast text.
 
-**Usage:** Fetch these instructions before performing content transformation tasks to ensure proper formatting and structure.
+**Usage:** Call this tool to get a multi-period weather forecast for any location within the US by providing its coordinates.
